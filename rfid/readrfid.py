@@ -1,5 +1,4 @@
-import RPi.GPIO as GPIO
-from mfrc522 import SimpleMFRC522
+from SimpleMFRC522 import SimpleMFRC522
 
 reader = SimpleMFRC522()
 try:
@@ -8,5 +7,6 @@ try:
     print(id)
     print(text)
 finally:
-    GPIO.cleanup()
+    pass
+    # GPIO.cleanup()
 
