@@ -1,4 +1,4 @@
-from SimpleMFRC522 import SimpleMFRC522
+from myMFRC522 import SimpleMFRC522
 
 reader = SimpleMFRC522()
 try:
