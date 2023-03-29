@@ -7,6 +7,8 @@ try:
     id, text = reader.read()
     print(id)
     print(text)
+except KeyboardInterrupt:
+    print("\nExiting due to keyboard interrupt")
 finally:
     chip = gpiod.chip(1)
     chip.reset()
