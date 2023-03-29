@@ -1,4 +1,5 @@
 from myMFRC522 import SimpleMFRC522
+import gpiod
 
 reader = SimpleMFRC522()
 try:
@@ -7,6 +8,6 @@ try:
     print(id)
     print(text)
 finally:
-    pass
-    # GPIO.cleanup()
+    chip = gpiod.chip(1)
+    chip.reset()
 
