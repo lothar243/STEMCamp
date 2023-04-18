@@ -1,5 +1,7 @@
 import os
-
+import gpiod
+import time
+import threading
 
 piPinTranslation = {
         # 3.3V
@@ -46,7 +48,19 @@ piPinTranslation = {
 
         }
 
-class LED:
+class OutputDevice():
+    def __init__(self, piPin):
+        if piPin not in piPinTranslation.keys():
+            raise Exception(f"Pi GPIO pin {piPin} not defined")
+
+        self.gpiochip = piPinTranslation[piPin][0]
+        self.gpionum = piPinTranslation[piPin][1]
+        self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
+        self.line = self.chip.get_line(self.gpionum)
+        self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
+        print("Initialized") 
+
+class LED(OutputDevice):
     """
 The following example will light the LED:
 from lePotatoGPIO import LED
@@ -73,11 +87,18 @@ led.on()
     """
 
     def __init__(self, piPin, active_high=True, initial_value=False):
-        if piPin not in piPinTranslation.keys():
-            raise Exception(f"Pi GPIO pin {piPin} not defined")
 
-        self.gpiochip = piPinTranslation[piPin][0]
-        self.gpionum = piPinTranslation[piPin][1]
+        super(LED, self).__init__(piPin)
+        #if piPin not in piPinTranslation.keys():
+        #    raise Exception(f"Pi GPIO pin {piPin} not defined")
+#
+#        self.gpiochip = piPinTranslation[piPin][0]
+#        self.gpionum = piPinTranslation[piPin][1]
+#        self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
+#        self.line = self.chip.get_line(self.gpionum)
+#        self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
+        self.blink_thread = None
+        self.pulse_thread = None
 
         if(active_high):
             self.active=1
@@ -92,12 +113,18 @@ led.on()
             self.on()
 
     def on(self):
-        os.system(f"gpioset {self.gpiochip} {self.gpionum}={self.active}")
+        self.line.set_value(self.active)
         self.currentState = 1
 
     def off(self):
-        os.system(f"gpioset {self.gpiochip} {self.gpionum}={self.inactive}")
+        self.line.set_value(self.inactive)
         self.currentState = 0
+
+    def toggle(self):
+        if self.currentState == 1:
+            self.off()
+        else:
+            self.on()
 
     def blink(self, on_time=1, off_time=1, n=None, background=True):
         """
