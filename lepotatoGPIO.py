@@ -2,6 +2,8 @@ import os
 import gpiod
 import time
 import threading
+from threading import Thread, Event
+from itertools import repeat, cycle, chain
 
 piPinTranslation = {
         # 3.3V
@@ -48,6 +50,53 @@ piPinTranslation = {
 
         }
 
+_THREADS = set()
+
+class ZombieThread(RuntimeError):
+    "Error raised when a thread fails to die within a given timeout"
+
+def _threads_shutdown():
+    while _THREADS:
+        threads = _THREADS.copy()
+        # Optimization: instead of calling stop() which implicitly calls
+        # join(), set all the stopping events simultaneously, *then* join
+        # threads with a reasonable timeout
+        for t in threads:
+            t.stopping.set()
+        for t in threads:
+            t.join(10)
+
+
+class GPIOThread(Thread):
+    def __init__(self, target, args=(), kwargs=None, name=None):
+        if kwargs is None:
+            kwargs = {}
+        self.stopping = Event()
+        super().__init__(None, target, name, args, kwargs)
+        self.daemon = True
+
+    def start(self):
+        self.stopping.clear()
+        _THREADS.add(self)
+        super().start()
+
+    def stop(self, timeout=10):
+        self.stopping.set()
+        self.join(timeout)
+
+    def join(self, timeout=None):
+        super().join(timeout)
+        if self.is_alive():
+            assert timeout is not None
+            # timeout can't be None here because if it was, then join()
+            # wouldn't return until the thread was dead
+            raise ZombieThread(
+                "Thread failed to die within {timeout} seconds".format(
+                    timeout=timeout))
+        else:
+            _THREADS.discard(self)
+
+
 class OutputDevice():
     def __init__(self, piPin):
         if piPin not in piPinTranslation.keys():
@@ -59,6 +108,16 @@ class OutputDevice():
         self.line = self.chip.get_line(self.gpionum)
         self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
         print("Initialized") 
+
+    def _write(self, value):
+        if value:
+            write_value = 1
+        else:
+            write_value = 0
+        try:
+            self.line.set_value(write_value)
+        except AttributeError:
+            raise
 
 class LED(OutputDevice):
     """
@@ -88,24 +147,12 @@ led.on()
 
     def __init__(self, piPin, active_high=True, initial_value=False):
 
+        self._blink_thread = None
+        self._controller = None
+        self._pulse_thread = None
         super(LED, self).__init__(piPin)
-        #if piPin not in piPinTranslation.keys():
-        #    raise Exception(f"Pi GPIO pin {piPin} not defined")
-#
-#        self.gpiochip = piPinTranslation[piPin][0]
-#        self.gpionum = piPinTranslation[piPin][1]
-#        self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
-#        self.line = self.chip.get_line(self.gpionum)
-#        self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
-        self.blink_thread = None
-        self.pulse_thread = None
 
-        if(active_high):
-            self.active=1
-            self.inactive=0
-        else:
-            self.active=0
-            self.inactive=1
+        self.active_high = active_high
 
         if(initial_value == False):
             self.off()
@@ -113,11 +160,13 @@ led.on()
             self.on()
 
     def on(self):
-        self.line.set_value(self.active)
+        self._stop_blink()
+        self._write(self.active_high)
         self.currentState = 1
 
     def off(self):
-        self.line.set_value(self.inactive)
+        self._stop_blink()
+        self._write(not self.active_high)
         self.currentState = 0
 
     def toggle(self):
@@ -146,6 +195,31 @@ Make the device turn on and off repeatedly.
     continue blinking and return immediately. If :data:`False`, only
     return when the blink is finished (warning: the default value of
     *n* will result in this method never returning)."""
-        pass
+        self._stop_blink()
+        self._blink_thread = GPIOThread(
+                self._blink_device, (on_time, off_time, n))
+        self._blink_thread.start()
+        if not background:
+            self._blink_thread.join()
+            self._blink_thread = None
+
+    def _stop_blink(self):
+        if getattr(self, '_controller', None):
+            self._controller._stop_blink(self)
+        self._controller = None
+        if getattr(self, '_blink_thread', None):
+            self._blink_thread.stop()
+        self._blink_thread = None
+
+    def _blink_device(self, on_time, off_time, n):
+        iterable = repeat(0) if n is None else repeat(0, n)
+        for _ in iterable:
+            self._write(True)
+            if self._blink_thread.stopping.wait(on_time):
+                break
+            self._write(False)
+            if self._blink_thread.stopping.wait(off_time):
+                break
+
 
 
