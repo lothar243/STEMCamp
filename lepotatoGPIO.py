@@ -1,11 +1,58 @@
 import os
-import gpiod
+# import gpiod
+import digitalio as dio
 import time
 import threading
 from threading import Thread, Event
 from itertools import repeat, cycle, chain
+import board
 
 piPinTranslation = {
+        # 3.3V    P1
+        2:  board.P3, 'SDA1': board.P3,
+        3:  board.P5, 'SCL1': board.P5,
+        4:  board.P7, 'GPIO4': board.P7,
+        # Ground  P9
+#        17: board.P11, 'GPIO17': board.P11, # TODO add P11
+        27: board.P13, 'GPIO27': board.P13,
+        22: board.P15, 'GPIO22': board.P15,
+        # 3.3V    P17
+        10: board.P19, 'SPIMOSI': board.P19, 'GPIO10': board.P19, 'MOSI': board.P19,
+        9:  board.P21, 'SPIMISO': board.P21, 'GPIO9':  board.P21, 'MISO': board.P21,
+        11: board.P23, 'SPICLK': board.P23, 'GPIO11': board.P23, 'SCLK': board.P23,
+        # Ground  P.25
+        0:  board.P27, 'ID_SD': board.P27, 'GPIO0':  board.P27, 'SDA0': board.P27,
+        5:  board.P29, 'GPIO5':  board.P29,
+        6:  board.P31, 'GPIO6':  board.P31,
+        13: board.P33, 'PWM1': board.P33, 'GPIO13': board.P33,
+        19: board.P35, 'GPIO19': board.P35,
+        26: board.P37, 'GPIO26': board.P37,
+        # Ground  P39
+
+        # 5V      P2
+        # 5V      P4
+        # Ground  P6
+        14: board.P8, 'TXD0': board.P8, 'GPIO14': board.P8,
+        15: board.P10, 'RXD0': board.P10, 'GPIO15': board.P10,
+        18: board.P12, 'PWM0': board.P12, 'GPIO18': board.P12, 
+        # Ground  P14
+        23: board.P16, 'GPIO23': board.P16,
+        24: board.P18, 'GPIO24': board.P18,
+        # Ground  P20
+        25: board.P22, 'GPIO25': board.P22,
+        8:  board.P24, 'SPICE0': board.P24, 'GPIO8':  board.P24, 'CE0': board.P24,
+        7:  board.P26, 'SPICE1': board.P26, 'GPIO7':  board.P26, 'CE1': board.P26,
+        'ID_SC': board.P28, 'SCL0': board.P28,
+        # Ground  P30
+        12: board.P32, 'GPIO12': board.P32,
+        # Ground  P34
+        16: board.P36, 'GPIO16': board.P36,
+        20: board.P38, 'GPIO20': board.P38,
+        21: board.P40, 'GPIO21': board.P40,
+
+        }
+
+piPinTranslation2 = {
         # 3.3V
         2:  (0, 5), 'SDA1': (0, 5),
         3:  (0, 4), 'SCL1': (0, 4),
@@ -49,6 +96,8 @@ piPinTranslation = {
         21: (1, 83), 'GPIO21': (1, 83),
 
         }
+
+
 
 _THREADS = set()
 
@@ -97,25 +146,30 @@ class GPIOThread(Thread):
             _THREADS.discard(self)
 
 
-class OutputDevice():
+class OutputDevice(dio.DigitalInOut):
     def __init__(self, piPin):
         if piPin not in piPinTranslation.keys():
             raise Exception(f"Pi GPIO pin {piPin} not defined")
 
-        self.gpiochip = piPinTranslation[piPin][0]
-        self.gpionum = piPinTranslation[piPin][1]
-        self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
-        self.line = self.chip.get_line(self.gpionum)
-        self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
-        print("Initialized") 
+#        self.gpiochip = piPinTranslation[piPin][0]
+#        self.gpionum = piPinTranslation[piPin][1]
+        super().__init__(piPinTranslation[piPin],)
+        self.direction = dio.Direction.OUTPUT
 
+        """     
+                self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
+                self.line = self.chip.get_line(self.gpionum)
+                self.line.request(consumer='LED', type=gpiod.LINE_REQ_DIR_OUT)
+        """
+        
     def _write(self, value):
-        if value:
-            write_value = 1
-        else:
-            write_value = 0
+        #        if value:
+        #            write_value = 1
+        #        else:
+        #            write_value = 0
         try:
-            self.line.set_value(write_value)
+            #self.line.set_value(write_value)
+            self.value = value
         except AttributeError:
             raise
 
@@ -150,14 +204,14 @@ led.on()
         self._blink_thread = None
         self._controller = None
         self._pulse_thread = None
-        super(LED, self).__init__(piPin)
+        super().__init__(piPin,)
 
         self.active_high = active_high
 
-        if(initial_value == False):
-            self.off()
-        elif(initial_value == True):
-            self.on()
+        #if(initial_value == False):
+        #    self.off()
+        #elif(initial_value == True):
+        #    self.on()
 
     def on(self):
         self._stop_blink()
@@ -221,5 +275,47 @@ Make the device turn on and off repeatedly.
             if self._blink_thread.stopping.wait(off_time):
                 break
 
+class InputDevice(dio.DigitalInOut):
+    def __init__(self, piPin):
+        if piPin not in piPinTranslation.keys():
+            raise Exception(f"Pi GPIO pin {piPin} not defined")
+        super().__init__(piPinTranslation[piPin],)
 
+    def __del__(self):
+        self.line.release()
+        self.chip.close()
+
+
+class Button(InputDevice):
+    def __init__(self, piPin, debounce=100):
+
+        super().__init__(piPin)
+        #self.gpiochip = piPinTranslation[piPin][0]
+        #self.gpionum = piPinTranslation[piPin][1]
+        #self.chip = gpiod.Chip('gpiochip{}'.format(self.gpiochip))
+        #self.line = self.chip.get_line(self.gpionum)
+        #self.line.request(consumer='BUTTON', type=gpiod.LINE_REQ_DIR_IN)
+        # super(Button, self).__init__(piPin)
+        #self.debounce = debounce
+        # self.line.set_debounce(self.debounce)
+        
+        self.callbacks = []
+        self.thread = None
+
+    def when_pressed(self, callback):
+        print("button pressed")
+        self.callbacks.append((gpiod.LINE_EVENT_RISING_EDGE, callback))
+
+    def when_release(self, callback):
+        print("button released")
+        self.callbacks.append((gpiod.LINE_EVENT_FALLING_EDGE, callback))
+
+    def wait_for_press(self):
+        print("waiting for press")
+        self.line.event_wait(gpiod.LINE_REQUEST_INPUT)
+
+    def is_pressed(self):
+        return self.value
+
+    
 
