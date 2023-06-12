@@ -98,6 +98,79 @@ piPinTranslation2 = {
         }
 
 
+class event:
+    """
+    A descriptor representing a callable event on a class
+    Instances of this class are very similar to a :class:`property` but also
+    deal with notifying the owning class when events are assigned (or
+    unassigned) and wrapping callbacks implicitly as appropriate.
+    """
+    def __init__(self, doc=None):
+        self.handlers = {}
+        self.__doc__ = doc
+
+    def _wrap_callback(self, instance, fn):
+        if not callable(fn):
+            raise BadEventHandler('value must be None or a callable')
+        # If fn is wrapped with partial (i.e. partial, partialmethod, or wraps
+        # has been used to produce it) we need to dig out the "real" function
+        # that's been wrapped along with all the mandatory positional args
+        # used in the wrapper so we can test the binding
+        args = ()
+        wrapped_fn = fn
+        while isinstance(wrapped_fn, partial):
+            args = wrapped_fn.args + args
+            wrapped_fn = wrapped_fn.func
+        if inspect.isbuiltin(wrapped_fn):
+            # We can't introspect the prototype of builtins. In this case we
+            # assume that the builtin has no (mandatory) parameters; this is
+            # the most reasonable assumption on the basis that pre-existing
+            # builtins have no knowledge of gpiozero, and the sole parameter
+            # we would pass is a gpiozero object
+            return fn
+        else:
+            # Try binding ourselves to the argspec of the provided callable.
+            # If this works, assume the function is capable of accepting no
+            # parameters
+            try:
+                inspect.getcallargs(wrapped_fn, *args)
+                return fn
+            except TypeError:
+                try:
+                    # If the above fails, try binding with a single parameter
+                    # (ourselves). If this works, wrap the specified callback
+                    inspect.getcallargs(wrapped_fn, *(args + (instance,)))
+                    @wraps(fn)
+                    def wrapper():
+                        return fn(instance)
+                    return wrapper
+                except TypeError:
+                    raise BadEventHandler(
+                        'value must be a callable which accepts up to one '
+                        'mandatory parameter')
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        else:
+            return self.handlers.get(id(instance))
+
+    def __set__(self, instance, value):
+        if value is None:
+            try:
+                del self.handlers[id(instance)]
+            except KeyError:
+                warnings.warn(CallbackSetToNone(callback_warning))
+        else:
+            self.handlers[id(instance)] = self._wrap_callback(instance, value)
+        enabled = any(
+            obj.handlers.get(id(instance))
+            for name in dir(type(instance))
+            for obj in (getattr(type(instance), name),)
+            if isinstance(obj, event)
+        )
+        instance._start_stop_events(enabled)
+
 
 _THREADS = set()
 
@@ -287,7 +360,7 @@ class InputDevice(dio.DigitalInOut):
 
 
 class Button(InputDevice):
-    def __init__(self, piPin, debounce=100):
+    def __init__(self, piPin, debounce=.02):
 
         super().__init__(piPin)
         #self.gpiochip = piPinTranslation[piPin][0]
@@ -299,23 +372,33 @@ class Button(InputDevice):
         #self.debounce = debounce
         # self.line.set_debounce(self.debounce)
         
-        self.callbacks = []
+        self.pressed_callback = None
+        self.released_callback = None
         self.thread = None
 
     def when_pressed(self, callback):
-        print("button pressed")
-        self.callbacks.append((gpiod.LINE_EVENT_RISING_EDGE, callback))
+        _check_callable(callback)
+        self.pressed_callback = callback
+        if self.thread == None:
+            self.thread = Thread(target=self.handle_callbacks)
 
     def when_release(self, callback):
         print("button released")
         self.callbacks.append((gpiod.LINE_EVENT_FALLING_EDGE, callback))
 
     def wait_for_press(self):
-        print("waiting for press")
-        self.line.event_wait(gpiod.LINE_REQUEST_INPUT)
+        while self.value:
+            time.sleep(.02)
 
     def is_pressed(self):
         return self.value
 
-    
+    def _check_callable(callback):
+        if not callable(fn):
+            raise BadEventHandler('value must be None or a callable')
+
+    def _handle_callbacks(debounce):
+        currentState = self.value
+        while True:
+            sleep
 
