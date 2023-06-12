@@ -1,13 +1,20 @@
-import RPi.GPIO as GPIO
-from mfrc522 import SimpleMFRC522
+from myMFRC522 import SimpleMFRC522
+from lepotatoGPIO import LED
 import lcd_i2c
 import csv
 import time
 
 
-RED = 21
-YELLOW = 20
-GREEN = 16
+redPin = 21
+yellowPin = 20
+greenPin = 16
+redLight = LED(redPin)
+yellowLight = LED(yellowPin)
+greenLight = LED(greenPin)
+redLight.off()
+yellowLight.off()
+greenLight.off()
+
 USE_LCD = True
 
 def logAccess(id, status):
@@ -25,23 +32,16 @@ with open ("validcards.txt", 'r')  as cardfile:
 
 print(validcards)
     
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(RED, GPIO.OUT)
-GPIO.output(RED, 0)
-GPIO.setup(YELLOW, GPIO.OUT)
-GPIO.output(YELLOW, 0)
-GPIO.setup(GREEN, GPIO.OUT)
-GPIO.output(GREEN, 0)
-
 
 reader = SimpleMFRC522()
 try:
     if USE_LCD:
         lcd_i2c.lcd_init()
     while True:
-        GPIO.output(RED, 0)
-        GPIO.output(GREEN, 0)
-        GPIO.output(YELLOW, 1)
+        reader.__init__()
+        redLight.off()
+        yellowLight.on()
+        greenLight.off()
         if USE_LCD:
             lcd_i2c.lcd_string(" Please present", lcd_i2c.LCD_LINE_1)
             lcd_i2c.lcd_string('    RFID card', lcd_i2c.LCD_LINE_2)
@@ -50,8 +50,8 @@ try:
         id, text = reader.read()
         print("card swiped, id=", type(id) ,id)
         if id in validcards:
-            GPIO.output(YELLOW, 0)
-            GPIO.output(GREEN, 1)
+            yellowLight.off()
+            greenLight.on()
             logAccess(id, "Access Granted")
             if USE_LCD:
                 lcd_i2c.lcd_string("Access Granted", lcd_i2c.LCD_LINE_1)
@@ -60,8 +60,8 @@ try:
                 print("Access Granted")
             time.sleep(5)
         else:
-            GPIO.output(YELLOW, 0)
-            GPIO.output(RED, 1)
+            yellowLight.off()
+            redLight.on()
             logAccess(id, "Access Denied")
             if(USE_LCD):
                 lcd_i2c.lcd_string("Access Denied", lcd_i2c.LCD_LINE_1)
@@ -71,8 +71,9 @@ try:
             time.sleep(5)
 
 
+except KeyboardInterrupt:
+    print("\nExiting due to keyboard interrupt")
             
 finally:
     print("Cleaning up...")
-    GPIO.cleanup()
     lcd_i2c.lcd_byte(0x01, lcd_i2c.LCD_CMD)
