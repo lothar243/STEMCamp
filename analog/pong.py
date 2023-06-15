@@ -11,16 +11,24 @@ Exercises
 6. Add a second ball.
 """
 
-from random import choice, random
+from random import choice, random, seed, randint
 from turtle import *
-
+import hashlib
+from base64 import b64decode
 from freegames import vector
+import sys
+from datetime import datetime
 
 
 #ADC stuff
 from smbus import SMBus
 bus = SMBus(1)
 ads7830_commands = (0x84, 0xc4, 0x94, 0xd4, 0xa4, 0xe4, 0xb4, 0xf4)
+
+with open(sys.argv[0], 'r') as thisfile:
+    myhash = hashlib.md5(thisfile.read().encode()).hexdigest()
+    inthash = int(myhash, 16)
+
 def scale_to_screen(initialVal):
     """Takes a values between 0 and 255 and scales it from -200 to 200"""
     return (initialVal * 400 / 256) - 200
@@ -43,15 +51,20 @@ def value():
 
 ball = vector(0, 0)
 aim = vector(value(), value())
-state = {1: 0, 2: 0}
+state = {1: 0, 2: 0, 'hitcount': 0}
 
 def restart():
     ball.x = 0
     ball.y = 0
     aim.x = value()
     aim.y = value()
+    state['hitcount'] = 0
     
-
+def checkScore():
+    if state['hitcount'] in (10, 15, 20):
+        seed(inthash * state['hitcount'])
+        code = str(randint(10000,99999))
+        print("hitcount " + str(state['hitcount']) + ", cymt{" + code + "}")
 
 def move(player, change):
     """Move player position by change."""
@@ -99,7 +112,16 @@ def draw():
         high = state[1] + 50
 
         if low <= y <= high:
-            aim.x = -aim.x + 1
+            # bounce
+            aim.x = -aim.x
+            # small random height change
+            seed = datetime.now().strftime('%s') * state['hitcount']
+            aim.y += randint(-1, 1)
+            # speed up
+            if(state['hitcount'] %2 == 0):
+                    aim.x += 1
+            state['hitcount'] += 1
+            checkScore()
         else:
             restart()
 
@@ -108,7 +130,16 @@ def draw():
         high = state[2] + 50
 
         if low <= y <= high:
-            aim.x = -aim.x - 1
+            # bounce
+            aim.x = -aim.x
+            # small random height change
+            seed = datetime.now().strftime('%s') * state['hitcount']
+            aim.y += randint(-1, 1)
+            # speed up
+            if(state['hitcount'] %2 == 0):
+                    aim.x -= 1
+            state['hitcount'] += 1
+            checkScore()
         else:
             restart()
 

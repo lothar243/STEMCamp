@@ -11,6 +11,14 @@ Exercises
 
 from random import choice
 from turtle import *
+import sys
+from base64 import b64decode
+import hashlib
+import random
+
+with open(sys.argv[0], 'r') as thisfile:
+    myhash = hashlib.md5(thisfile.read().encode()).hexdigest()
+    inthash = int(myhash, 16)
 
 #Joystick stuff
 from smbus import SMBus
@@ -146,6 +154,11 @@ def move():
 
     writer.undo()
     writer.write(state['score'])
+    if(state['score'] == 140):
+        random.seed(inthash)
+        code = str(random.randint(10000,99999))
+        print(str(b64decode(b'WW91IGNsZWFyZWQgdGhlIGxldmVsISBZb3VyIGZsYWcgaXMgY3lNVHs='))[2:-1] + code + "}")
+
 
     clear()
 
