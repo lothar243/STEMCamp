@@ -8,25 +8,31 @@ echo "Adding the STEM camp directory to PYTHONPATH, so that certain libraries ca
 echo "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)\"" >> ~/.bashrc
 
 #echo "Enabling ssh"
-#sudo systemctl enable ssh
-#sudo systemctl start ssh
+sudo apt install -y openssh-server
+sudo systemctl enable ssh --now
 
 echo "Enabling SPI and I2C"
 #sudo crontab -l > mycron
 echo "@reboot ldto enable i2c-ao" > mycron
 #echo "@reboot ldto enable spi###"
-sudo crontab mycron
-sudo rm mycron
+# sudo crontab mycron
+# sudo rm mycron
+echo "@reboot ldto enable i2c-ao" > .cronfile
+echo "@reboot ldto enable spicc" >> .cronfile
+echo "@reboot ldto enable spicc-spidev" >> .cronfile
+sudo crontab .cronfile
+rm .cronfile
 
 #sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/config.txt
 #sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
 
 sudo apt update
 sudo apt install -y snapd
+sudo apt install python3-libgpiod
 sudo snap install core
 sudo snap install john-the-ripper
-#pip3 install mfrc522
+pip3 install mfrc522
 
 sudo apt install python3-pip
 pip3 install smbus
-
+pip3 install Adafruit-Blinka 
