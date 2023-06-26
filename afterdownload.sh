@@ -28,12 +28,12 @@ rm .cronfile
 
 sudo apt update
 sudo apt install -y snapd
-sudo apt install python3-libgpiod
+sudo apt install -y python3-libgpiod
 sudo snap install core
 sudo snap install john-the-ripper
 pip3 install mfrc522
 
-sudo apt install python3-pip
+sudo apt install -y python3-pip
 pip3 install smbus
 pip3 install Adafruit-Blinka 
 
