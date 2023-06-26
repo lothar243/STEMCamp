@@ -36,3 +36,6 @@ pip3 install mfrc522
 sudo apt install python3-pip
 pip3 install smbus
 pip3 install Adafruit-Blinka 
+
+sudo chmod 666 /dev/gpiochip0
+sudo chmod 666 /dev/gpiochip1
