@@ -4,7 +4,7 @@ echo "Setting up rsaHex.py to be executed from anywhere"
 sudo chmod +x /usr/bin/ciphor.py
 sudo cp rsaHex.py /usr/bin
 sudo chmod +x /usr/bin/rsaHex.py
-echo "Adding the STEM camp directory to PYTHONPATH, so that certain libraries can be imported from anywhere
+echo "Adding the STEM camp directory to PYTHONPATH, so that certain libraries can be imported from anywhere"
 echo "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)\"" >> ~/.bashrc
 
 #echo "Enabling ssh"
