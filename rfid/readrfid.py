@@ -1,17 +1,12 @@
-from myMFRC522 import SimpleMFRC522
-import gpiod
+import RPi.GPIO as GPIO
+from mfrc522 import SimpleMFRC522
 
 reader = SimpleMFRC522()
 try:
-    reader.__init__()
-    print("Tap the a card to the reader to read it (or press CTRL+C to quit)")
+    print("Tap the a card to the reader to read it...")
     id, text = reader.read()
-    print("Card id: " + str(id))
-    print("Text: " + text)
-except KeyboardInterrupt:
-    print("\nExiting due to keyboard interrupt")
+    print(id)
+    print(text)
 finally:
-    pass
-#    chip = gpiod.Chip("1")
-#    chip.reset()
+    GPIO.cleanup()
 

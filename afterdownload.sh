@@ -11,15 +11,10 @@ echo "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)\"" >> ~/.bashrc
 sudo apt install -y openssh-server
 sudo systemctl enable ssh --now
 
+
 echo "Enabling SPI and I2C"
-#sudo crontab -l > mycron
-echo "@reboot ldto enable i2c-ao" > mycron
-#echo "@reboot ldto enable spi###"
-# sudo crontab mycron
-# sudo rm mycron
-echo "@reboot ldto enable i2c-ao" > .cronfile
-echo "@reboot ldto enable spicc" >> .cronfile
-echo "@reboot ldto enable spicc-spidev" >> .cronfile
+sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/config.txt
+sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
 sudo crontab .cronfile
 rm .cronfile
 
@@ -36,6 +31,4 @@ pip3 install mfrc522
 sudo apt install -y python3-pip
 pip3 install smbus
 pip3 install Adafruit-Blinka 
-
-sudo chmod 666 /dev/gpiochip0
-sudo chmod 666 /dev/gpiochip1
+pip3 install freegames

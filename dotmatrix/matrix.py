@@ -1,4 +1,4 @@
-from lepotatoGPIO import LED
+from gpiozero import LED
 from time import sleep
 from threading import Thread
 from pprint import pprint

@@ -12,6 +12,6 @@ for i, val in enumerate(list):
     #lcd_i2c.lcd_byte(i, 0)
     lcd_i2c.lcd_byte(100 - val + 2 * i, 1)
 
-print("Your message should be displayed right now on the LCD screen.")
+print("Your message should be displayed right now (you may need to adjust your contrast to see it clearly")
 input("Press enter to quit")
 lcd_i2c.lcd_init()
