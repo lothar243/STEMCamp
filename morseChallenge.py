@@ -1,4 +1,4 @@
-from lepotatoGPIO import LED
+from gpiozero import LED
 from time import sleep
 from string import ascii_uppercase
 import sys
