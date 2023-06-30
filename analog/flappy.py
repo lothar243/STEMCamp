@@ -20,7 +20,7 @@ def covered():
     bus.write_byte(0x4b, ads7830_commands[7])
     reading = bus.read_byte(0x4b)
     print(reading)
-    return (reading > 100)
+    return (reading > 200)
 
 
 bird = vector(0, 0)
@@ -43,9 +43,9 @@ def draw(alive):
     clear()
 
     if covered():
-        bird.y += 8
+        bird.y += 4
     else:
-        bird.y -= 8
+        bird.y -= 4
     goto(bird.x, bird.y)
 
     if alive:
@@ -85,7 +85,7 @@ def move():
             return
 
     draw(True)
-    ontimer(move, 10)
+    ontimer(move, 30)
 
 
 setup(420, 420, 370, 0)
