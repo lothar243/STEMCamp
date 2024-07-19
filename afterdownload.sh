@@ -15,8 +15,8 @@ sudo systemctl enable ssh --now
 echo "Enabling SPI and I2C"
 sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/config.txt
 sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
-sudo crontab .cronfile
-rm .cronfile
+# sudo crontab .cronfile
+# rm .cronfile
 
 #sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/config.txt
 #sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
@@ -26,11 +26,11 @@ sudo apt install -y snapd
 sudo apt install -y python3-libgpiod
 sudo snap install core
 sudo snap install john-the-ripper
-pip3 install mfrc522
+# pip3 install mfrc522
 
-sudo apt install -y python3-pip
-pip3 install smbus
-pip3 install freegames
+# sudo apt install -y python3-pip
+# pip3 install smbus
+# pip3 install freegames
 
-sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
-sudo python3 -m pip install --force-reinstall adafruit-blinka
+# sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
+# sudo python3 -m pip install --force-reinstall adafruit-blinka
