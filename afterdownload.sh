@@ -22,15 +22,16 @@ sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
 #sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/config.txt
 
 sudo apt update
-sudo apt install -y snapd
 sudo apt install -y python3-libgpiod
-sudo snap install core
-sudo snap install john-the-ripper
+#sudo apt install -y snapd
+#sudo snap install core
+#sudo snap install john-the-ripper
+
+sudo apt install -y python3-pip
 pip3 install --break-system-packages mfrc522
+sudo pip3 install --break-system-packages rpi_ws281x adafruit-circuitpython-neopixel
+pip3 install --break-system-packages freegames
 
-# sudo apt install -y python3-pip
 # pip3 install smbus
-# pip3 install freegames
 
-# sudo pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 # sudo python3 -m pip install --force-reinstall adafruit-blinka
