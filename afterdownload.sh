@@ -26,7 +26,7 @@ sudo apt install -y snapd
 sudo apt install -y python3-libgpiod
 sudo snap install core
 sudo snap install john-the-ripper
-# pip3 install mfrc522
+pip3 install --break-system-packages mfrc522
 
 # sudo apt install -y python3-pip
 # pip3 install smbus
