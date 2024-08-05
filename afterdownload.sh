@@ -16,7 +16,7 @@ echo "Enabling SPI and I2C"
 sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/firmware/config.txt
 sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/firmware/config.txt
 echo "Disabling WIFI"
-echo dtoverlay=disable-wifi >> sudo tee -a /boot/firmware/config.txt
+echo dtoverlay=disable-wifi | sudo tee -a /boot/firmware/config.txt
 
 sudo apt update
 sudo apt install -y python3-libgpiod
