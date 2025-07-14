@@ -1,36 +1,3 @@
-#!/usr/bin/python
-#--------------------------------------
-#    ___  ___  _ ____
-#   / _ \/ _ \(_) __/__  __ __
-#  / , _/ ___/ /\ \/ _ \/ // /
-# /_/|_/_/  /_/___/ .__/\_, /
-#                /_/   /___/
-#
-#  lcd_i2c.py
-#  LCD test script using I2C backpack.
-#  Supports 16x2 and 20x4 screens.
-#
-# Author : Matt Hawkins
-# Date   : 20/09/2015
-#
-# http://www.raspberrypi-spy.co.uk/
-#
-# Copyright 2015 Matt Hawkins
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#--------------------------------------
 import smbus
 import time
 
@@ -86,6 +53,13 @@ def lcd_byte(bits, mode):
   # Low bits
   bus.write_byte(I2C_ADDR, bits_low)
   lcd_toggle_enable(bits_low)
+
+def lcd_create_char(location, charmap):
+  """Write a custom character (0–7) to CGRAM"""
+  location &= 0x07  # Only 8 locations (0–7)
+  lcd_byte(0x40 | (location << 3), LCD_CMD)
+  for row in charmap:
+    lcd_byte(row, LCD_CHR)
 
 def lcd_toggle_enable(bits):
   # Toggle enable
