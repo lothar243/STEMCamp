@@ -420,6 +420,9 @@ def process_command_line():
     parser.add_argument("-k", "--key", dest="key", help="designate a key cipher as the cipher. \
         a key is usually a word like my_password or cat that you can easily remember. \
         You may only use -c or -k, not both. This argument expects a key of one or more characters.")
+    parser.add_argument("-K", "--step", dest="step_params", type=int, nargs=2, metavar=("STEP", "OFFSET"),
+        help="Take every STEP-th character starting from OFFSET. This is useful for analyzing \
+        key ciphor text.")
     parser.add_argument("-o", "--output", dest="output",
         help="Output a cipher text or plain text (depending on the operation.")
     parser.add_argument("-s", "--stats_flag", dest="stats_flag",  action="store_true",
@@ -449,6 +452,18 @@ def check_errors(args):
     if args.encrypt_flag and args.decrypt_flag:
         raise SystemExit("You cannot both encrypt and decrypt at once. Please choose just one.")
 
+def step_text(text, step_size, offset):
+    """Reads every nth letter of the text, starting at offset"""
+    index = 0
+    outputText = ""
+    keys = list(letter_2_num_map.keys())
+    for char in text:
+        if(char.lower() in keys):
+            if(index % step_size - offset == 0):
+                outputText += char
+            index += 1
+    return outputText
+
 
 ### End Command Line processing
  
@@ -468,6 +483,10 @@ def main():
         try:
             with open(args.source_file, 'r') as fd:
                 message = fd.read()
+            if args.step_params:
+                step, offset = args.step_params
+                message = step_text(message, step, offset)
+
         except Exception as e:
             print(e)
             raise SystemExit("There was a problem reading the file {}. It may be there is \
