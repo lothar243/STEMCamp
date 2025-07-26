@@ -115,18 +115,35 @@ def print_stats(stats):
     '''
     assert(stats is not None)
     letters = letter_2_num_map.keys()
-    print("Character Frequencies: ")
-    print("index   char   count\t   %\t\t   English %")
-    sum = 0
-    for c in stats:
-        sum += stats[c]
-    index = 0
-    for l in letters:
-        if l in stats:
-            print("  {} \t {}  =  {}\t-- {:.4f} %\t--\t{} %".format(index, l, stats[l],(stats[l] / sum) * 100, english_letter_freq[l]))
-        else:
-            print("  {} \t {}  =  0\t-- 0.0\t  % \t-- \t{} %".format(index, l, english_letter_freq[l]))
-        index+=1
+
+    print("Character Frequencies (Normalized to Most Frequent Letter):")
+    print("Index  Char  Count    Actual                            English")
+
+    total = sum(stats.get(c, 0) for c in letters)
+    max_bar_width = 25  # Width of each bar (actual and English)
+
+    # Get actual and expected max frequencies for normalization
+    actual_freqs = {c: (stats.get(c, 0) / total * 100) if total > 0 else 0 for c in letters}
+    expected_freqs = {c: english_letter_freq[c] for c in letters}
+
+    max_actual = max(actual_freqs.values()) if actual_freqs else 1
+    max_expected = max(expected_freqs.values()) if expected_freqs else 1
+
+    for index, l in enumerate(letters):
+        count = stats.get(l, 0)
+        actual_freq = actual_freqs[l]
+        expected_freq = expected_freqs[l]
+        diff = actual_freq - expected_freq
+
+        # Normalize each bar to max in its set
+        norm_actual_len = int((actual_freq / max_actual) * max_bar_width)
+        norm_expected_len = int((expected_freq / max_expected) * max_bar_width)
+
+        actual_bar = '█' * norm_actual_len
+        expected_bar = '░' * norm_expected_len
+
+        print(f"{index:>5}   {l}    {count:<6} {actual_freq:6.1f}% {actual_bar:<25} {expected_freq:6.1f}% {expected_bar:<25}")
+        index += 1
 
 def caesar_encrypt(plain_text, shift):
     '''
