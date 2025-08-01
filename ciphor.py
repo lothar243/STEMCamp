@@ -115,18 +115,35 @@ def print_stats(stats):
     '''
     assert(stats is not None)
     letters = letter_2_num_map.keys()
-    print("Character Frequencies: ")
-    print("index   char   count\t   %\t\t   English %")
-    sum = 0
-    for c in stats:
-        sum += stats[c]
-    index = 0
-    for l in letters:
-        if l in stats:
-            print("  {} \t {}  =  {}\t-- {:.4f} %\t--\t{} %".format(index, l, stats[l],(stats[l] / sum) * 100, english_letter_freq[l]))
-        else:
-            print("  {} \t {}  =  0\t-- 0.0\t  % \t-- \t{} %".format(index, l, english_letter_freq[l]))
-        index+=1
+
+    print("Character Frequencies (Normalized to Most Frequent Letter):")
+    print("Index  Char  Count    Actual                            English")
+
+    total = sum(stats.get(c, 0) for c in letters)
+    max_bar_width = 25  # Width of each bar (actual and English)
+
+    # Get actual and expected max frequencies for normalization
+    actual_freqs = {c: (stats.get(c, 0) / total * 100) if total > 0 else 0 for c in letters}
+    expected_freqs = {c: english_letter_freq[c] for c in letters}
+
+    max_actual = max(actual_freqs.values()) if actual_freqs else 1
+    max_expected = max(expected_freqs.values()) if expected_freqs else 1
+
+    for index, l in enumerate(letters):
+        count = stats.get(l, 0)
+        actual_freq = actual_freqs[l]
+        expected_freq = expected_freqs[l]
+        diff = actual_freq - expected_freq
+
+        # Normalize each bar to max in its set
+        norm_actual_len = int((actual_freq / max_actual) * max_bar_width)
+        norm_expected_len = int((expected_freq / max_expected) * max_bar_width)
+
+        actual_bar = '█' * norm_actual_len
+        expected_bar = '░' * norm_expected_len
+
+        print(f"{index:>5}   {l}    {count:<6} {actual_freq:6.1f}% {actual_bar:<25} {expected_freq:6.1f}% {expected_bar:<25}")
+        index += 1
 
 def caesar_encrypt(plain_text, shift):
     '''
@@ -420,6 +437,9 @@ def process_command_line():
     parser.add_argument("-k", "--key", dest="key", help="designate a key cipher as the cipher. \
         a key is usually a word like my_password or cat that you can easily remember. \
         You may only use -c or -k, not both. This argument expects a key of one or more characters.")
+    parser.add_argument("-K", "--step", dest="step_params", type=int, nargs=2, metavar=("STEP", "OFFSET"),
+        help="Take every STEP-th character starting from OFFSET. This is useful for analyzing \
+        key ciphor text.")
     parser.add_argument("-o", "--output", dest="output",
         help="Output a cipher text or plain text (depending on the operation.")
     parser.add_argument("-s", "--stats_flag", dest="stats_flag",  action="store_true",
@@ -449,6 +469,18 @@ def check_errors(args):
     if args.encrypt_flag and args.decrypt_flag:
         raise SystemExit("You cannot both encrypt and decrypt at once. Please choose just one.")
 
+def step_text(text, step_size, offset):
+    """Reads every nth letter of the text, starting at offset"""
+    index = 0
+    outputText = ""
+    keys = list(letter_2_num_map.keys())
+    for char in text:
+        if(char.lower() in keys):
+            if(index % step_size - offset == 0):
+                outputText += char
+            index += 1
+    return outputText
+
 
 ### End Command Line processing
  
@@ -468,6 +500,10 @@ def main():
         try:
             with open(args.source_file, 'r') as fd:
                 message = fd.read()
+            if args.step_params:
+                step, offset = args.step_params
+                message = step_text(message, step, offset)
+
         except Exception as e:
             print(e)
             raise SystemExit("There was a problem reading the file {}. It may be there is \
