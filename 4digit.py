@@ -32,9 +32,10 @@ def display_value(value):
                 segments[segment_num].on()
             else:
                 segments[segment_num].off()
-        sleep(.005)
+        sleep(.002)
         digits[index].off()
 
 
-while True:
-    display_value("5609")
+if __name__ == "__main__":
+    while True:
+        display_value("5609")
