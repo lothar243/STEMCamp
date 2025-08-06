@@ -1,55 +1,42 @@
-from gpiozero import DigitalOutputDevice as dod, Button
+# Feel free to use this as a library (calling get_keypad_buttons)
+# to get a list of buttons that are currently pressed.
+
+import RPi.GPIO as GPIO
 from time import sleep
 
-col_pins = [Button(26), Button(19), Button(13), Button(6)]
-row_pins = [dod(21), dod(20), dod(16), dod(12)]
+GPIO.setmode(GPIO.BCM) # Use the GPIO pin numbers (instead of physical pin numbers)
+
 
 def decode_key(col, row):
-    if col == 0:
-        if row == 0:
-            return "1"
-        if row == 1:
-            return "4"
-        if row == 2:
-            return "7"
-        if row == 3:
-            return "*"
-    if col == 1:
-        if row == 0:
-            return "2"
-        if row == 1:
-            return "5"
-        if row == 2:
-            return "8"
-        if row == 3:
-            return "0"
-    if col == 2:
-        if row == 0:
-            return "3"
-        if row == 1:
-            return "6"
-        if row == 2:
-            return "9"
-        if row == 3:
-            return "#"
-    if col == 3:
-        if row == 0:
-            return "A"
-        if row == 1:
-            return "B"
-        if row == 2:
-            return "C"
-        if row == 3:
-            return "D"
+    """Given a column and row, return the character that is pressed"""
+    keys = [
+            ["1", "2", "3", "A"],
+            ["4", "5", "6", "B"],
+            ["7", "8", "9", "C"],
+            ["*", "0", "#", "D"]
+            ]
+    return keys[row][col]
 
-def get_keypad_button(col_pins, row_pins):
+def get_keypad_buttons(col_pins, row_pins):
+    """Read through each row/column to determine which buttons are currently pressed
+    Returns a list of their characters"""
+    pressed_buttons = []
     for row_num, row_pin in enumerate(row_pins):
-        row_pin.off()
+        GPIO.setup(row_pin, GPIO.OUT)
+        GPIO.output(row_pin, 0) # pull to ground
         for col_num, col_pin in enumerate(col_pins):
-            if(col_pin.is_pressed):
-                print(decode_key(col_num, row_num))
-        row_pin.on()
+            GPIO.setup(col_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            if(GPIO.input(col_pin) == 0):
+                pressed_buttons.append(decode_key(col_num, row_num))
+        GPIO.setup(row_pin, GPIO.IN)
+    return pressed_buttons
 
-while True:
-    get_keypad_button(col_pins, row_pins)
-    sleep(.2)
+if __name__ == "__main__":
+    # Example execution - this just prints what is pressed
+    col_pins = [26, 19, 13, 6]
+    row_pins = [21, 20, 16, 12]
+    while True:
+        pressed_buttons = get_keypad_buttons(col_pins, row_pins)
+        if len(pressed_buttons) != 0:
+            print(pressed_buttons)
+        sleep(.2)
