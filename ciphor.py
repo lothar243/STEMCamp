@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import random
 import sys
+import math
 
 letter_2_num_map = {
     "a" : 0,
@@ -30,7 +31,7 @@ letter_2_num_map = {
     "w" : 22,
     "x" : 23,
     "y" : 24,
-    "z" : 25
+    "z" : 25,
 }
 
 num_2_letter_map = {
@@ -90,6 +91,103 @@ english_letter_freq = {
     "y" : 2.04,
     "z" : 0.06
 }
+
+letter_2_num_map_ext = {}
+
+for i, c in enumerate("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):
+    letter_2_num_map_ext[c] = i
+
+num_2_letter_map_ext = {v: k for k, v in letter_2_num_map_ext.items()}
+
+def mod_exp(base, exponent, mod):
+    """Performs modular exponentiation (base^exponent % mod) efficiently."""
+    result = 1
+    base = base % mod
+    while exponent > 0:
+        if exponent % 2 == 1:
+            result = (result * base) % mod
+        exponent = exponent >> 1
+        base = (base * base) % mod
+    return result
+
+def egcd(a, b):
+    """Extended Euclidean Algorithm to find modular inverse."""
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        g, y, x = egcd(b % a, a)
+        return (g, x - (b // a) * y, y)
+
+def modinv(a, m):
+    """Finds modular inverse of a mod m."""
+    g, x, y = egcd(a, m)
+    if g != 1:
+        raise Exception('modular inverse does not exist')
+    return x % m
+
+def generate_small_coprime(phi):
+    e = phi
+    maxVal = int(math.sqrt(phi) ) + 10
+    attempts = 0
+    while math.gcd(phi, e) > 1 and attempts < 100:
+        e = random.randint(3, maxVal)
+        attempts += 1
+    if attempts >= 100:
+        raise Exception(f'unable to find coprime for {phi} with a maxVal of {maxVal}')
+    return e
+    
+
+def generate_keys():
+    """
+    Generates a simple public/private key pair using small primes.
+    For educational purposes only.
+    Returns: ((e, n), (d, n))
+    """
+    first_primes = [17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181, 191, 193, 197, 199]
+    random.shuffle(first_primes)
+    p = first_primes[0]             # example p = 11
+    q = first_primes[1]             # q = 17
+    n = p * q                       # n = 187
+    phi = (p - 1) * (q - 1)         # phi = 160
+    e = generate_small_coprime(phi) # Choose small e that is coprime to phi, e = 7
+    d = modinv(e, phi)              # Private exponent
+    return ((e, n), (d, n))
+
+
+def asym_encrypt(plain_text, public_key):
+    """
+    Encrypts a-z, A-Z, 0-9 characters using RSA-style encryption.
+    Non-letters (spaces, punctuation) are left as-is.
+    Encrypted values are separated by underscores.
+    """
+    e, n = public_key
+    encrypted_parts = []
+    for c in plain_text:
+        if c in letter_2_num_map_ext:
+            num = letter_2_num_map_ext[c]
+            encrypted = mod_exp(num, e, n)
+            encrypted_parts.append(str(encrypted))
+        else:
+            encrypted_parts.append(c)
+    return '_'.join(encrypted_parts)
+
+def asym_decrypt(cipher_text, private_key):
+    """
+    Decrypts underscore-separated numbers.
+    Other characters (spaces, punctuation) are left as-is.
+    Underscores are treated purely as separators.
+    """
+    d, n = private_key
+    decrypted = ""
+    tokens = cipher_text.split('_')
+    for token in tokens:
+        if token.isdigit():
+            num = int(token)
+            decrypted_num = mod_exp(num, d, n)
+            decrypted += num_2_letter_map_ext.get(decrypted_num, '?')
+        else:
+            decrypted += token  # pass through punctuation and spaces
+    return decrypted
 
 def analyze_text(text):
     '''
@@ -427,7 +525,7 @@ def process_command_line():
     parser = argparse.ArgumentParser("ciphor.py")
     parser.add_argument("-c", "--caesar", dest="caesar_shift", type=int, help="designate \
         the caesar cipher as your cipher. You must set a shift. The shift is an integer greater than 0. \
-        You may only use one of -c or -k, not both.")
+        You may only use one of -c -k or --asym, not multiple.")
     parser.add_argument("-d", "--decrypt", dest="decrypt_flag", action="store_true", help="designate \
         decryption as the action to take. Note: you may only use one of -d or -e, not both.")
     parser.add_argument("-e", "--encrypt", dest="encrypt_flag", action="store_true", help="designate \
@@ -436,7 +534,7 @@ def process_command_line():
         cipher text for encrypt/decryption.")
     parser.add_argument("-k", "--key", dest="key", help="designate a key cipher as the cipher. \
         a key is usually a word like my_password or cat that you can easily remember. \
-        You may only use -c or -k, not both. This argument expects a key of one or more characters.")
+        You may only use one of -c -k or --asym, not multiple. This argument expects a key of one or more characters.")
     parser.add_argument("-K", "--step", dest="step_params", type=int, nargs=2, metavar=("STEP", "OFFSET"),
         help="Take every STEP-th character starting from OFFSET. This is useful for analyzing \
         key ciphor text.")
@@ -449,6 +547,11 @@ def process_command_line():
     parser.add_argument("-t", "--test", dest="test_flag",  action="store_true",
         help="Execute unit tests, print results, then exit.")
     parser.add_argument("message", nargs="*", help="Optional plain or cipher text.")
+    parser.add_argument("--asym", dest="asym_key", nargs=2, metavar=("EXPONENT", "MODULUS"), type=int,
+        help="Use RSA-style asymmetric cipher. Provide exponent and modulus. You may only use one of -c -k or --asym, not multiple.")
+    parser.add_argument("--genkeys", dest="genkeys_flag", action="store_true",
+        help="Generate a new RSA public/private key pair and exit.")
+
     if len(sys.argv) < 2:
         parser.print_help(sys.stderr)
         quit()
@@ -468,6 +571,21 @@ def check_errors(args):
         raise SystemExit("You cannot do both a caesar cipher and a key cipher at the same time. Please choose just one.")
     if args.encrypt_flag and args.decrypt_flag:
         raise SystemExit("You cannot both encrypt and decrypt at once. Please choose just one.")
+
+    args.asym_flag = args.asym_key is not None
+    args.genkeys_flag = args.genkeys_flag if "genkeys_flag" in args else False
+
+    if args.genkeys_flag:
+        pub, priv = generate_keys()
+        print("Public Key:  ", pub)
+        print("Private Key: ", priv)
+        quit()
+
+    if args.asym_flag:
+        if args.encrypt_flag and not args.asym_key:
+            raise SystemExit("Encryption with --asym requires exponent and modulus.")
+        if args.decrypt_flag and not args.asym_key:
+            raise SystemExit("Decryption with --asym requires exponent and modulus.")
 
 def step_text(text, step_size, offset):
     """Reads every nth letter of the text, starting at offset"""
@@ -519,13 +637,20 @@ def main():
     if args.encrypt_flag:
         if args.caesar_flag:
             ciphered_message = caesar_encrypt(message, args.caesar_shift)
+        elif args.asym_key:
+            e, n = args.asym_key
+            ciphered_message = asym_encrypt(message, (e, n))
         else:
             ciphered_message = key_encrypt(message, args.key)
     elif args.decrypt_flag:
         if args.caesar_flag:
             ciphered_message = caesar_decrypt(message, args.caesar_shift)
+        elif args.asym_flag:
+            d, n = args.asym_key
+            ciphered_message = asym_decrypt(message, (d, n))
         else:
             ciphered_message = key_decrypt(message, args.key)
+
     if args.stats_flag:
         stats = analyze_text(message)
         print_stats(stats)
