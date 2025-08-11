@@ -13,7 +13,7 @@ led = LED(26)
 button = Button(16)
 
 FILENAME = "reaction_times.txt"
-MAX_RECORDS = 5
+MAX_RECORDS = 10
 
 def load_best_times():
     if not os.path.exists(FILENAME):
@@ -31,6 +31,9 @@ def play_round():
     print("Wait for it...")
     sleep(random.uniform(3, 5))  # Wait before signal
 
+    if(button.is_pressed):
+        print("You pressed the button to early")
+        return 9999999
     led.off()
     print("GO! Press the button!")
 
@@ -52,7 +55,7 @@ def main():
         best_times = best_times[:MAX_RECORDS]
         save_best_times(best_times)
 
-        print("\nTop 10 Fastest Times:")
+        print("\nTop {MAX_RECORDS} Fastest Times:")
         for i, t in enumerate(best_times, 1):
             print(f"{i}. {t:.4f} sec")
 
