@@ -4,18 +4,21 @@ echo "Setting up rsaHex.py to be executed from anywhere"
 sudo chmod +x /usr/bin/ciphor.py
 sudo cp rsaHex.py /usr/bin
 sudo chmod +x /usr/bin/rsaHex.py
-echo "Adding the STEM camp directory to PYTHONPATH, so that certain libraries can be imported from anywhere"
-echo "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)\"" >> ~/.bashrc
+# echo "Adding the STEM camp directory to PYTHONPATH, so that certain libraries can be imported from anywhere"
+# echo "export PYTHONPATH=\"${PYTHONPATH}:$(pwd)\"" >> ~/.bashrc
 
 #echo "Enabling ssh"
 sudo apt install -y openssh-server
 sudo systemctl enable ssh --now
 
+# installing lcd_i2c package
+sudo cp lcd_i2c.py /usr/lib/python3/dist-packages/
+sudo chmod 755 /usr/lib/python3/dist-packages/lcd_i2c.py
 
 echo "Enabling SPI and I2C"
 sudo sed -i "/dtparam=spi=on/s/^#//g" /boot/firmware/config.txt
 sudo sed -i "/dtparam=i2c_arm=on/s/^#//g" /boot/firmware/config.txt
-echo "Disabling WIFI"
+
 echo dtoverlay=disable-wifi | sudo tee -a /boot/firmware/config.txt
 
 sudo apt update
