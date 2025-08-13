@@ -618,9 +618,6 @@ def main():
         try:
             with open(args.source_file, 'r') as fd:
                 message = fd.read()
-            if args.step_params:
-                step, offset = args.step_params
-                message = step_text(message, step, offset)
 
         except Exception as e:
             print(e)
@@ -628,7 +625,11 @@ def main():
                    a special character in the file (outside normal ASCII). \
                    ciphor currently supports only basic encodings. You may try \
                    finding and removing the offending character or using a different file.".format(args.source_file))
-                   
+
+    if args.step_params:
+        step, offset = args.step_params
+        message = step_text(message, step, offset)
+            
         print("message is: ", message)
     if message is None:
         raise SystemExit("No message to encrypt, decrypt, or get stats for!")
